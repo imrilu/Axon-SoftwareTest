@@ -1,26 +1,21 @@
-
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.optim.lr_scheduler import StepLR
 from MNISTDataModule import MNISTDataModule
+
 
 class NetPL(pl.LightningModule):
     def __init__(self):
-        super(NetPL, self).__init__()#
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)#
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)#
-        self.dropout1 = nn.Dropout(0.25)#
-        self.dropout2 = nn.Dropout(0.5)#
-        self.fc1 = nn.Linear(9216, 128)#
-        self.fc2 = nn.Linear(128, 10)#
+        super(NetPL, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.dropout1 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, 10)
         self.lr = 1.0
-        # device = torch.device("cuda" if args.use_cuda else "cpu")
-        #
-        # self.model = NetPL().to(device)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -43,34 +38,38 @@ class NetPL(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         data, target = batch
-        self.configure_optimizers().zero_grad() #todo: implement
+        self.configure_optimizers().zero_grad()
         output = self(data)
         loss = F.nll_loss(output, target)
         # loss.backward()
         self.log('train_loss', loss)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_Step(self, batch, batch_idx):
         data, target = batch
+        self.configure_optimizers().zero_grad()
         output = self(data)
-        val_loss = F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+        val_loss = F.nll_loss(output, target)
+        # loss.backward()
         self.log('val_loss', val_loss)
         return val_loss
 
-class Classifier(nn.Module):
-    def __init__(self):
-        self.classifier = NetPL()
+    def test_step(self, batch, batch_idx):
+        data, target = batch
+        output = self(data)
+        test_loss = F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+        self.log('test_loss', test_loss)
+        return test_loss
+
 
 def main():
     dm = MNISTDataModule()
     model = NetPL()
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(max_epochs=dm.args.epochs)
     trainer.fit(model, dm)
-
     if dm.args.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
 
+
 if __name__ == '__main__':
     main()
-
-

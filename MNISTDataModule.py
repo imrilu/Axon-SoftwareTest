@@ -1,11 +1,8 @@
 import pytorch_lightning as pl
 import argparse
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.optim.lr_scheduler import StepLR
+
 
 class MNISTDataModule(pl.LightningDataModule):
 
@@ -35,10 +32,7 @@ class MNISTDataModule(pl.LightningDataModule):
                             help='For Saving the current Model')
         self.args = parser.parse_args()
         self.use_cuda = not self.args.no_cuda and torch.cuda.is_available()
-
         torch.manual_seed(self.args.seed)
-
-        self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
         self.train_kwargs = {'batch_size': self.args.batch_size}
         self.test_kwargs = {'batch_size': self.args.test_batch_size}
@@ -54,18 +48,19 @@ class MNISTDataModule(pl.LightningDataModule):
         mnist_test = datasets.MNIST('../data', train=False)
 
     def setup(self, stage):
-        # transforms
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])
-
         self.mnist_train = datasets.MNIST('../data', train=True, download=True, transform=transform)
+        self.mnist_train, self.mnist_val = torch.utils.data.random_split(self.mnist_train, [55000, 5000])
         self.mnist_test = datasets.MNIST('../data', train=False, transform=transform)
 
     def train_dataloader(self):
         return torch.utils.data.DataLoader(self.mnist_train, **self.train_kwargs)
 
+    def val_dataloader(self):
+        return torch.utils.data.DataLoader(self.mnist_val, **self.test_kwargs)
+
     def test_dataloader(self):
         return torch.utils.data.DataLoader(self.mnist_test, **self.test_kwargs)
-

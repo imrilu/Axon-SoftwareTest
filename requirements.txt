@@ -1,0 +1,4 @@
+torch
+torchvision
+argparse
+pytorch_lightning
